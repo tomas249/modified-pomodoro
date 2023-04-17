@@ -8,7 +8,7 @@
     <button id="apply-btn" type="button">Apply</button>
   </div>
   <div>
-    hello
+    <input id="offset" type="text" placeholder="offset">
   </div>
   <div id="root" />
 </body>
@@ -23,32 +23,41 @@
   const LONG_REST_AFTER = SESSION_DURATION * LONG_BREAK_AFTER_SESSIONS
 
   const tasks = [
+    // {
+    //   name: 'Organize tasks',
+    //   duration: 10,
+    //   repeat: 1
+    // },
     {
-      name: 'fast read',
-      duration: 120,
+      name: 'Task 1.',
+      duration: 15,
+      repeat: 7
+    },
+    {
+      name: 'Unfinished in previous task',
+      duration: 30,
       repeat: 1
     },
     {
-      name: 'quick notes',
-      duration: 60,
-      repeat: 1
-    },
-    {
-      name: 'ex 1-3',
-      duration: 60,
+      name: 'Task 2.',
+      duration: 80,
       repeat: 3
     },
     {
-      name: 'ex4',
-      duration: 15,
-      repeat: 10
-    },
-    {
-      name: 'test',
+      name: 'Task 3.',
       duration: 20,
       repeat: 4
     }
   ]
+
+  function calculateOffset(count) {
+    const tasksFlat = tasks.reduce((all, task) => {
+      const taskFlat = Array(task.repeat ?? 1).fill(task.duration)
+      return all.concat(taskFlat)
+    }, [])
+
+    return tasksFlat.slice(0, count).reduce((sum, duration) => sum + duration, 0)
+  }
 
   const applyBtn = document.getElementById('apply-btn')
   applyBtn.addEventListener('click', apply)
@@ -56,31 +65,46 @@
   function apply() {
     const hourInput = document.getElementById('hour').value
     const minutesInput = document.getElementById('minutes').value
+    const offsetInput = document.getElementById('offset').value
     const hour = parseInt(hourInput)
     const minutes = parseInt(minutesInput)
+    const offsetCount = parseInt(offsetInput)
 
     if (isNaN(hour) || isNaN(minutes)) {
       alert('Please enter valid hour and minutes')
       return
     }
+    const offset = calculateOffset(offsetCount)
 
-    createTasks(hour, minutes)
+    const totalMinutes = hour * 60 + minutes - offset
+    const m = totalMinutes % 60
+    const h = (totalMinutes - m) / 60
+
+    createTasks(h, m)
     localStorage.setItem('hour', hour)
     localStorage.setItem('minutes', minutes)
+    localStorage.setItem('offset', offsetCount)
   }
 
   window.onload = () => {
     const hourLocal = localStorage.getItem('hour')
     const minutesLocal = localStorage.getItem('minutes')
+    const offsetLocal = localStorage.getItem('offset')
 
     if (hourLocal && minutesLocal) {
       const hour = parseInt(hourLocal)
       const minutes = parseInt(minutesLocal)
+      const offsetCount = parseInt(offsetLocal || 0)
 
-      createTasks(hour, minutes)
+      const totalMinutes = hour * 60 + minutes - calculateOffset(offsetCount)
+      const m = totalMinutes % 60
+      const h = (totalMinutes - m) / 60
 
       document.getElementById('hour').value = hour
       document.getElementById('minutes').value = minutes
+      document.getElementById('offset').value = offsetCount
+
+      createTasks(h, m)
     }
   }
 
@@ -137,6 +161,9 @@
     root.innerHTML = ''
     const org = orgInit()
 
+    const hourInput = parseInt(document.getElementById('hour').value || 0)
+    const minutesInput = parseInt(document.getElementById('minutes').value || 0)
+
     for (const task of final_tasks) {
       // Indicate HOUR
       if (!org[hour]) {
@@ -148,6 +175,9 @@
       // Add TASK start time
       const text = document.createElement('DIV')
       text.innerHTML = `${formatHours(hour * 60 + minutes)} -> ${task.name} (${formatHours(task.duration)})`
+      if (hour === hourInput && (minutes >= minutesInput && minutes < minutesInput + task.duration)) {
+        text.style.color = 'red'
+      }
       root.append(text)
 
       const m = task.duration % 60

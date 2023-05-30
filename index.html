@@ -29,39 +29,95 @@
     //   repeat: 1
     // },
     {
-      name: 'Activitat 2- b',
+      name: 'Activitat 1 - h',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - i',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - j',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - k',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - l',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - m',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - n',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - o',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - p',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - q',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - r',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - s',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - t',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - u',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - v',
+      duration: 10,
+      repeat: 1
+    },
+    {
+      name: 'Activitat 1 - back',
       duration: 30,
       repeat: 1
     },
     {
-      name: 'Activitat 2- c',
-      duration: 30,
+      name: 'Activitat 2',
+      duration: 60,
       repeat: 1
-    },
-    {
-      name: 'Activitat 2- d',
-      duration: 30,
-      repeat: 1
-    },
-    {
-      name: 'Activitat 2- e',
-      duration: 30,
-      repeat: 1
-    },
-    {
-      name: 'Activitat 3',
-      duration: 30,
-      repeat: 4
-    },
-    {
-      name: 'Activitat 4',
-      duration: 20,
-      repeat: 4
     },
   ]
 
   function repeatTask(task) {
-    return Array(task.repeat).fill(task).map((t, i) => ({ ...t, name: `${t.name} ${i + 1}` }))
+    // return Array(task.repeat).fill(task).map((t, i) => ({ ...t, name: `${t.name} ${i + 1}` }))
+    return Array(task.repeat).fill(task).map((t, i) => ({ ...t, name: `${t.name}` }))
   }
 
   function extractProps({ name, duration }) {

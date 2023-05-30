@@ -1,0 +1,293 @@
+<html>
+  <body>
+    <div>
+      <input id="hour" type="text" placeholder="hour" />
+      :
+      <input id="minutes" type="text" placeholder="minutes" />
+      <button id="apply-btn" type="button">Apply</button>
+    </div>
+    <div>
+      <input id="offset" type="text" placeholder="offset" />
+    </div>
+    <div id="root" />
+  </body>
+
+  <script>
+    const SHORT_REST_TIME = 5;
+    const LONG_REST_TIME = 15;
+    const SESSION_DURATION = 50;
+    const LONG_BREAK_AFTER_SESSIONS = 4;
+
+    const SHORT_REST_AFTER = SESSION_DURATION;
+    const LONG_REST_AFTER = SESSION_DURATION * LONG_BREAK_AFTER_SESSIONS;
+
+    const tasks = [
+      // {
+      //   name: 'Organize tasks',
+      //   duration: 10,
+      //   repeat: 1
+      // },
+      {
+        name: "Activitat 1 - h",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - i",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - j",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - k",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - l",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - m",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - n",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - o",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - p",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - q",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - r",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - s",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - t",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - u",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - v",
+        duration: 10,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 1 - back",
+        duration: 30,
+        repeat: 1,
+      },
+      {
+        name: "Activitat 2",
+        duration: 60,
+        repeat: 1,
+      },
+    ];
+
+    function repeatTask(task) {
+      // return Array(task.repeat).fill(task).map((t, i) => ({ ...t, name: `${t.name} ${i + 1}` }))
+      return Array(task.repeat)
+        .fill(task)
+        .map((t, i) => ({ ...t, name: `${t.name}` }));
+    }
+
+    function extractProps({ name, duration }) {
+      return { name, duration };
+    }
+
+    const flattenedTasks = tasks.reduce((allTasks, task) => {
+      const repeatedTasks = repeatTask(task);
+      const formatedTasks = repeatedTasks.map(extractProps);
+      return allTasks.concat(formatedTasks);
+    }, []);
+
+    const orgInit = () =>
+      Array(23)
+        .fill()
+        .reduce((all, _, h) => {
+          all[h] = false;
+          return all;
+        }, {});
+
+    const final_tasks = [];
+    let current_working_time = 0;
+    let current_session_counter = 0;
+    for (const [i, task] of flattenedTasks.entries()) {
+      final_tasks.push(task);
+      current_working_time += task.duration;
+
+      if (current_working_time >= SHORT_REST_AFTER) {
+        if (i === flattenedTasks.length - 1) break;
+
+        if (current_session_counter === LONG_BREAK_AFTER_SESSIONS) {
+          final_tasks.push({
+            name: "LONG BREAK",
+            duration: LONG_REST_TIME,
+          });
+          current_session_counter = 0;
+        } else {
+          final_tasks.push({
+            name: "SHORT BREAK",
+            duration: SHORT_REST_TIME,
+          });
+          current_session_counter += 1;
+        }
+
+        current_working_time = 0;
+      }
+    }
+
+    function calculateOffset(count) {
+      const tasksFlat = final_tasks.reduce((all, task) => {
+        const taskFlat = Array(task.repeat ?? 1).fill(task.duration);
+        return all.concat(taskFlat);
+      }, []);
+
+      return tasksFlat
+        .slice(0, count)
+        .reduce((sum, duration) => sum + duration, 0);
+    }
+
+    const applyBtn = document.getElementById("apply-btn");
+    applyBtn.addEventListener("click", apply);
+
+    function apply() {
+      const hourInput = document.getElementById("hour").value;
+      const minutesInput = document.getElementById("minutes").value;
+      const offsetInput = document.getElementById("offset").value;
+      const hour = parseInt(hourInput);
+      const minutes = parseInt(minutesInput);
+      const offsetCount = parseInt(offsetInput);
+
+      if (isNaN(hour) || isNaN(minutes)) {
+        alert("Please enter valid hour and minutes");
+        return;
+      }
+      const offset = calculateOffset(offsetCount);
+
+      const totalMinutes = hour * 60 + minutes - offset;
+      const m = totalMinutes % 60;
+      const h = (totalMinutes - m) / 60;
+
+      createTasks(h, m);
+      localStorage.setItem("hour", hour);
+      localStorage.setItem("minutes", minutes);
+      localStorage.setItem("offset", offsetCount);
+    }
+
+    window.onload = () => {
+      const hourLocal = localStorage.getItem("hour");
+      const minutesLocal = localStorage.getItem("minutes");
+      const offsetLocal = localStorage.getItem("offset");
+
+      if (hourLocal && minutesLocal) {
+        const hour = parseInt(hourLocal);
+        const minutes = parseInt(minutesLocal);
+        const offsetCount = parseInt(offsetLocal || 0);
+
+        const totalMinutes = hour * 60 + minutes - calculateOffset(offsetCount);
+        const m = totalMinutes % 60;
+        const h = (totalMinutes - m) / 60;
+
+        document.getElementById("hour").value = hour;
+        document.getElementById("minutes").value = minutes;
+        document.getElementById("offset").value = offsetCount;
+
+        createTasks(h, m);
+      }
+    };
+
+    function createTasks(hour, minutes) {
+      const root = document.getElementById("root");
+      root.innerHTML = "";
+      const org = orgInit();
+
+      const hourInput = parseInt(document.getElementById("hour").value || 0);
+      const minutesInput = parseInt(
+        document.getElementById("minutes").value || 0
+      );
+
+      for (const [i, task] of final_tasks.entries()) {
+        // Indicate HOUR
+        if (!org[hour]) {
+          org[hour] = true;
+          const h1 = document.createElement("H1");
+          h1.innerHTML = `${hour} h`;
+          root.append(h1);
+        }
+        // Add TASK start time
+        const text = document.createElement("DIV");
+        text.innerHTML = `${formatHours(hour * 60 + minutes)} -> ${
+          task.name
+        } (${formatHours(task.duration)})`;
+        if (
+          hour === hourInput &&
+          minutes >= minutesInput &&
+          minutes < minutesInput + task.duration
+        ) {
+          text.style.color = "red";
+        }
+        text.style.cursor = "pointer";
+        text.addEventListener("click", () => {
+          document.getElementById("offset").value = i;
+          apply();
+        });
+        root.append(text);
+
+        const m = task.duration % 60;
+        const h = (task.duration - m) / 60;
+
+        hour += h;
+        let m_next = minutes + m;
+        if (m_next >= 60) {
+          m_next -= 60;
+          hour += 1;
+        }
+        minutes = m_next;
+      }
+    }
+
+    function addZeroIfNeeded(number) {
+      return (number < 10 ? "0" : "") + number;
+    }
+
+    function formatHours(minutes) {
+      const m = minutes % 60;
+      const h = (minutes - m) / 60;
+
+      // if (h === 0) return m.toString() + 'm'
+      // if (m === 0) return h.toString() + 'h'
+      return `${h.toString()}:${addZeroIfNeeded(m)}`;
+    }
+  </script>
+</html>

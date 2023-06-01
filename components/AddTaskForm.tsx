@@ -14,10 +14,25 @@ type Task = {
   name: string;
   duration: number;
   repeat: number;
+  repeatType: 'number' | 'letter';
+};
+
+type TaskExtended = {
+  id: string;
+  formatter: string;
+  duration: number;
+  repeat: number;
+  repeatType: 'number' | 'letter';
+  tasksExtended: {
+    id: string;
+    listId: string;
+    name: string;
+    duration: number;
+  }[];
 };
 
 export type AddTaskFormProps = {
-  onAddTask: (task: Task) => void;
+  onAddTask: (task: TaskExtended) => void;
 };
 
 export default function AddTaskForm({ onAddTask }: AddTaskFormProps) {
@@ -29,9 +44,10 @@ export default function AddTaskForm({ onAddTask }: AddTaskFormProps) {
       name: data.name,
       duration: parseDuration(data.duration),
       repeat: parseInt(data.repeat),
+      repeatType: data.repeatType,
     };
 
-    onAddTask(task);
+    onAddTask(extendTask(task));
   };
 
   return (
@@ -110,10 +126,37 @@ export default function AddTaskForm({ onAddTask }: AddTaskFormProps) {
 }
 
 function generateShortUUID() {
-  return Math.random().toString(36).substring(2, 5);
+  return Math.random().toString(36);
 }
 
 function parseDuration(duration: string) {
   const [hours, minutes] = duration.split(':');
   return parseInt(hours) * 60 + parseInt(minutes);
+}
+
+function extendTask(task: Task): TaskExtended {
+  const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
+
+  const taskExtended: TaskExtended = {
+    ...task,
+    formatter: task.name,
+    duration: task.duration,
+    repeat: task.repeat,
+    repeatType: task.repeatType,
+    tasksExtended: [],
+  };
+
+  const replaceSymbol = (idx: number) =>
+    task.repeatType === 'number' ? idx.toString() : letters[idx];
+
+  for (let i = 0; i < task.repeat; i++) {
+    taskExtended.tasksExtended.push({
+      id: generateShortUUID(),
+      listId: task.id,
+      name: task.name.replace('$', replaceSymbol(i)),
+      duration: task.duration,
+    });
+  }
+
+  return taskExtended;
 }

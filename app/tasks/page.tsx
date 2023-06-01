@@ -110,18 +110,18 @@ export default function Tasks() {
   const [startTime, setStartTime] = useState(0);
   const [lastSavedTime, setLastSavedTime] = useState(0);
 
-  function isFirstUnfinishedTask(id: string, index: number) {
-    return (
-      (index === 0 && !tasks[id].finished) ||
-      (index > 0 && tasks[tasksIds[index - 1]].finished && !tasks[id].finished)
-    );
-  }
+  // function isFirstUnfinishedTask(id: string, index: number) {
+  //   return (
+  //     (index === 0 && !tasks[id].finished) ||
+  //     (index > 0 && tasks[tasksIds[index - 1]].finished && !tasks[id].finished)
+  //   );
+  // }
 
-  function isLastFinishedTask(id: string, index: number) {
-    return (
-      index < tasksIds.length - 1 && !tasks[tasksIds[index + 1]].finished && tasks[id].finished
-    );
-  }
+  // function isLastFinishedTask(id: string, index: number) {
+  //   return (
+  //     index < tasksIds.length - 1 && !tasks[tasksIds[index + 1]].finished && tasks[id].finished
+  //   );
+  // }
 
   return (
     <div className="flex h-full flex-col">
@@ -213,7 +213,7 @@ export default function Tasks() {
               <span>
                 {tasks[id].name} ({parseDurationToString(tasks[id].duration)})
               </span>
-              {isLastFinishedTask(id, index) && (
+              {tasks[id].finished && (
                 <button
                   className="ml-2 rounded-md bg-red-200 px-2 py-1 hover:bg-red-300"
                   onClick={() => {
@@ -226,7 +226,7 @@ export default function Tasks() {
                   Undo
                 </button>
               )}
-              {isFirstUnfinishedTask(id, index) && (
+              {!tasks[id].finished && (
                 <button
                   className="ml-2 rounded-md bg-green-200 px-2 py-1 hover:bg-green-300"
                   onClick={() => {

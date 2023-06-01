@@ -21,6 +21,10 @@ type Schema = {
 };
 type Schemas = Schema[];
 
+function getTimeInMin() {
+  return new Date().getHours() * 60 + new Date().getMinutes();
+}
+
 export default function Tasks() {
   const [schemas, setSchemas] = useState<Schemas>([]);
   const [tasks, setTasks] = useState<
@@ -33,10 +37,9 @@ export default function Tasks() {
     () => schemas.flatMap((schema) => schema.tasks.map((task) => task.id)),
     [schemas],
   );
-  const [startTimeValue, setStartTimeValue] = useState(
-    parseDurationToHHMM(new Date().getHours() * 60 + new Date().getMinutes()),
-  );
+  const [startTimeValue, setStartTimeValue] = useState(parseDurationToHHMM(getTimeInMin()));
   const [startTime, setStartTime] = useState(0);
+  const [lastSavedTime, setLastSavedTime] = useState(0);
 
   function isFirstUnfinishedTask(id: string, index: number) {
     return (
@@ -87,6 +90,39 @@ export default function Tasks() {
           setTasks((prev) => ({ ...prev, ...toByField(g.tasksExtended, 'id') }));
         }}
       />
+      <hr className="my-4" />
+
+      <div className="flex items-center space-x-2">
+        <button
+          className="rounded-md bg-slate-200 px-2 py-1 hover:bg-slate-300"
+          onClick={() => {
+            localStorage.setItem('schemas', JSON.stringify(schemas));
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+
+            const lastSaved = getTimeInMin();
+            localStorage.setItem('lastSavedTime', JSON.stringify(lastSaved));
+            setLastSavedTime(lastSaved);
+          }}
+        >
+          Save
+        </button>
+        <button
+          className="rounded-md bg-slate-200 px-2 py-1 hover:bg-slate-300"
+          onClick={() => {
+            const schemas = JSON.parse(localStorage.getItem('schemas') || '[]');
+            const tasks = JSON.parse(localStorage.getItem('tasks') || '{}');
+            const lastSavedTime = JSON.parse(localStorage.getItem('lastSavedTime') || '0');
+
+            setSchemas(schemas);
+            setTasks(tasks);
+            setLastSavedTime(lastSavedTime);
+          }}
+        >
+          Load
+        </button>
+        <span className="text-slate-600">Last saved at: {parseDurationToHHMM(lastSavedTime)}</span>
+      </div>
+
       <hr className="my-4" />
 
       <div className="flex items-center space-x-2">

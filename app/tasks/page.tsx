@@ -1,8 +1,8 @@
 'use client';
 
-import { ChangeEvent, useMemo, useState } from 'react';
+import { ChangeEvent, useCallback, useMemo, useState } from 'react';
 import AddTaskForm from '@/components/AddTaskForm';
-import { parseDurationToInt, parseDurationToString, toByField } from '@/utils';
+import { parseDurationToHHMM, parseDurationToInt, parseDurationToString, toByField } from '@/utils';
 
 type Task = {
   id: string;
@@ -24,12 +24,51 @@ type Schemas = Schema[];
 export default function Tasks() {
   const [schemas, setSchemas] = useState<Schemas>([]);
   const [tasks, setTasks] = useState<
-    Record<string, { id: string; listId: string; name: string; duration: number }>
+    Record<
+      string,
+      { id: string; listId: string; name: string; duration: number; finished?: boolean }
+    >
   >({});
   const tasksIds = useMemo(
     () => schemas.flatMap((schema) => schema.tasks.map((task) => task.id)),
     [schemas],
   );
+  const [startTimeValue, setStartTimeValue] = useState(
+    parseDurationToHHMM(new Date().getHours() * 60 + new Date().getMinutes()),
+  );
+  const [startTime, setStartTime] = useState(0);
+
+  function isFirstUnfinishedTask(id: string, index: number) {
+    return (
+      (index === 0 && !tasks[id].finished) ||
+      (index > 0 && tasks[tasksIds[index - 1]].finished && !tasks[id].finished)
+    );
+  }
+
+  function isLastFinishedTask(id: string, index: number) {
+    return (
+      index < tasksIds.length - 1 && !tasks[tasksIds[index + 1]].finished && tasks[id].finished
+    );
+  }
+
+  const getTaskStatus = useMemo(() => {
+    function* gen() {
+      let time = startTime;
+
+      for (const id of tasksIds) {
+        const task = tasks[id];
+        if (task.finished) {
+          yield null;
+        } else {
+          const nextTime = time + task.duration;
+          yield `${parseDurationToHHMM(time)} - ${parseDurationToHHMM(nextTime)}`;
+          time = nextTime;
+        }
+      }
+    }
+
+    return gen();
+  }, [startTime, tasks, tasksIds]);
 
   return (
     <div className="flex h-full flex-col">
@@ -49,15 +88,61 @@ export default function Tasks() {
         }}
       />
       <hr className="my-4" />
+
+      <div className="flex items-center space-x-2">
+        <span className="flex text-xs text-gray-800">Start next task at:</span>
+        <input
+          className="w-20 rounded-md bg-slate-200 px-2 py-1 outline-none"
+          type="string"
+          value={startTimeValue}
+          onChange={(e) => setStartTimeValue(e.target.value)}
+        />
+        <button
+          className="rounded-md bg-slate-200 px-2 py-1 hover:bg-slate-300"
+          onClick={() => {
+            setStartTime(parseDurationToInt(startTimeValue));
+          }}
+        >
+          Save
+        </button>
+        <span className="text-slate-600">{parseDurationToHHMM(startTime)}</span>
+      </div>
+
+      <hr className="my-4" />
       <div className="flex space-x-2">
         {/* Expanded */}
         <div className="flex w-full flex-col space-y-2">
           {tasksIds.map((id, index) => (
             <div
               key={id}
-              className="flex flex-col justify-between rounded-md bg-slate-200 px-4 py-2"
+              className={`flex items-center rounded-md px-4 py-2 ${
+                tasks[id].finished ? 'bg-gray-500' : 'bg-slate-200'
+              }`}
             >
-              {tasks[id].name} ({parseDurationToString(tasks[id].duration)})
+              <span>
+                {tasks[id].name} ({parseDurationToString(tasks[id].duration)})
+              </span>
+              {isLastFinishedTask(id, index) && (
+                <button
+                  className="ml-2 rounded-md bg-red-200 px-2 py-1 hover:bg-red-300"
+                  onClick={() => {
+                    setTasks((prev) => ({ ...prev, [id]: { ...prev[id], finished: false } }));
+                  }}
+                >
+                  Undo
+                </button>
+              )}
+              {isFirstUnfinishedTask(id, index) && (
+                <button
+                  className="ml-2 rounded-md bg-green-200 px-2 py-1 hover:bg-green-300"
+                  onClick={() => {
+                    setTasks((prev) => ({ ...prev, [id]: { ...prev[id], finished: true } }));
+                  }}
+                >
+                  Finish
+                </button>
+              )}
+              <span className="ml-auto">{getTaskStatus.next().value || '<>'}</span>
             </div>
           ))}
         </div>

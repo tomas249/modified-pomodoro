@@ -25,12 +25,81 @@ function getTimeInMin() {
   return new Date().getHours() * 60 + new Date().getMinutes();
 }
 
+function* genTaskTime(
+  startTime: number,
+  tasks: Record<string, Task & { finished?: boolean }>,
+  tasksIds: string[],
+) {
+  let time = startTime;
+
+  for (const id of tasksIds) {
+    const task = tasks[id];
+    console.log('yielding');
+    if (task.finished) {
+      yield null;
+    } else {
+      const nextTime = time + task.duration;
+      yield `${parseDurationToHHMM(time)} - ${parseDurationToHHMM(nextTime)}`;
+      time = nextTime;
+    }
+  }
+}
+
+function calculateTaskStatus(
+  startTime: number,
+  tasks: (Task & { status?: string; finished?: boolean })[],
+) {
+  let time = startTime;
+  const newTasks = tasks.map((task) => {
+    if (task.finished) {
+      task.status = '<>';
+    } else {
+      const nextTime = time + task.duration;
+      task.status = `${parseDurationToHHMM(time)} - ${parseDurationToHHMM(nextTime)}`;
+      time = nextTime;
+    }
+    return task;
+  });
+  console.log('calculate', tasks, newTasks);
+
+  return newTasks;
+}
+
+function recalculateTaskStatus(
+  startTime: number,
+  tasks: Record<string, Task & { status?: string; finished?: boolean }>,
+  tasksIds: string[],
+) {
+  let time = startTime;
+  const newTasks = { ...tasks };
+  console.log('recalculate', newTasks);
+  for (const id of tasksIds) {
+    const task = newTasks[id];
+    if (task.finished) {
+      task.status = '<>';
+    } else {
+      const nextTime = time + task.duration;
+      task.status = `${parseDurationToHHMM(time)} - ${parseDurationToHHMM(nextTime)}`;
+      time = nextTime;
+    }
+  }
+
+  return newTasks;
+}
+
 export default function Tasks() {
   const [schemas, setSchemas] = useState<Schemas>([]);
   const [tasks, setTasks] = useState<
     Record<
       string,
-      { id: string; listId: string; name: string; duration: number; finished?: boolean }
+      {
+        id: string;
+        listId: string;
+        name: string;
+        duration: number;
+        finished?: boolean;
+        status?: string;
+      }
     >
   >({});
   const tasksIds = useMemo(
@@ -54,25 +123,6 @@ export default function Tasks() {
     );
   }
 
-  const getTaskStatus = useMemo(() => {
-    function* gen() {
-      let time = startTime;
-
-      for (const id of tasksIds) {
-        const task = tasks[id];
-        if (task.finished) {
-          yield null;
-        } else {
-          const nextTime = time + task.duration;
-          yield `${parseDurationToHHMM(time)} - ${parseDurationToHHMM(nextTime)}`;
-          time = nextTime;
-        }
-      }
-    }
-
-    return gen();
-  }, [startTime, tasks, tasksIds]);
-
   return (
     <div className="flex h-full flex-col">
       <AddTaskForm
@@ -87,7 +137,10 @@ export default function Tasks() {
           };
 
           setSchemas((prev) => [...prev, schema]);
-          setTasks((prev) => ({ ...prev, ...toByField(g.tasksExtended, 'id') }));
+          setTasks((prev) => ({
+            ...prev,
+            ...toByField(calculateTaskStatus(startTime, g.tasksExtended), 'id'),
+          }));
         }}
       />
       <hr className="my-4" />
@@ -136,7 +189,9 @@ export default function Tasks() {
         <button
           className="rounded-md bg-slate-200 px-2 py-1 hover:bg-slate-300"
           onClick={() => {
-            setStartTime(parseDurationToInt(startTimeValue));
+            const newStartTime = parseDurationToInt(startTimeValue);
+            setStartTime(newStartTime);
+            setTasks((prev) => recalculateTaskStatus(newStartTime, prev, tasksIds));
           }}
         >
           Save
@@ -162,7 +217,10 @@ export default function Tasks() {
                 <button
                   className="ml-2 rounded-md bg-red-200 px-2 py-1 hover:bg-red-300"
                   onClick={() => {
-                    setTasks((prev) => ({ ...prev, [id]: { ...prev[id], finished: false } }));
+                    setTasks((prev) => {
+                      const newTasks = { ...prev, [id]: { ...prev[id], finished: false } };
+                      return recalculateTaskStatus(startTime, newTasks, tasksIds);
+                    });
                   }}
                 >
                   Undo
@@ -172,13 +230,16 @@ export default function Tasks() {
                 <button
                   className="ml-2 rounded-md bg-green-200 px-2 py-1 hover:bg-green-300"
                   onClick={() => {
-                    setTasks((prev) => ({ ...prev, [id]: { ...prev[id], finished: true } }));
+                    setTasks((prev) => {
+                      const newTasks = { ...prev, [id]: { ...prev[id], finished: true } };
+                      return recalculateTaskStatus(startTime, newTasks, tasksIds);
+                    });
                   }}
                 >
                   Finish
                 </button>
               )}
-              <span className="ml-auto">{getTaskStatus.next().value || '<>'}</span>
+              <span className="ml-auto">{tasks[id].status || 'ERROR'}</span>
             </div>
           ))}
         </div>
@@ -200,10 +261,13 @@ export default function Tasks() {
                   onClick={() => {
                     setSchemas((prev) => prev.filter((s) => s.id !== schema.id));
                     setTasks((prev) => {
-                      const newTasks = { ...prev };
+                      let newTasks = { ...prev };
                       schema.tasks.forEach((task) => {
                         delete newTasks[task.id];
                       });
+
+                      newTasks = recalculateTaskStatus(startTime, newTasks, tasksIds);
+
                       return newTasks;
                     });
                   }}
@@ -216,7 +280,10 @@ export default function Tasks() {
                   <EditableTask
                     task={task}
                     onSave={(task) => {
-                      console.log(task);
+                      setTasks((prev) => {
+                        const newTasks = { ...prev, [task.id]: task };
+                        return recalculateTaskStatus(startTime, newTasks, tasksIds);
+                      });
                     }}
                   >
                     <div className="flex flex-col justify-between px-4 py-2">
@@ -274,7 +341,6 @@ function EditableTask({
               className="mr-2 rounded-md bg-red-200 px-2 py-1"
               onClick={(event) => {
                 event.stopPropagation();
-                console.log('aaa');
                 setNewValues(defaultValues);
                 setIsEditing(false);
               }}

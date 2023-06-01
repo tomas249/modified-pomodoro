@@ -23,10 +23,6 @@ type Schemas = Schema[];
 
 export default function Tasks() {
   const [schemas, setSchemas] = useState<Schemas>([]);
-  // const tasks = useMemo(() => {
-  //   const tasks = schemas.flatMap((schema) => schema.tasks);
-  //   return toByField(tasks, 'id');
-  // }, [schemas]);
   const [tasks, setTasks] = useState<
     Record<string, { id: string; listId: string; name: string; duration: number }>
   >({});
